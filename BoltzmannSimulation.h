@@ -5,27 +5,30 @@
 #include <string>
 #include <cmath>
 #include <Kokkos_Core.hpp>
-#include "omp.h"
-
-const int NUM_THREADS = 8;
-
-const int NL = 9;
 
 
-Kokkos::View<int*> invert_k;
-Kokkos::View<int*> dxs_k;
-Kokkos::View<int*> dys_k;
-Kokkos::View<double*> weights_k;
+
 
 class BoltzmannSumulation
 {
-private:
+public:
+
+	Kokkos::DefaultExecutionSpace defExecSpace;
+
 	const int Ny;
 	const int Nx;
+	const int NL = 9;
 	const double TAU = 0.58;
-	Kokkos::View<float*> new_table_k;
-	Kokkos::View<float*> cur_table_k;
-	Kokkos::View<bool*> isBondary_k;
+	Kokkos::View<float*, Kokkos::SharedSpace> new_table_k;
+	Kokkos::View<float*, Kokkos::SharedSpace> cur_table_k;
+	Kokkos::View<bool*, Kokkos::SharedSpace> isBondary_k;
+
+
+	Kokkos::View<int*, Kokkos::SharedSpace> invert_k;
+	Kokkos::View<int*, Kokkos::SharedSpace> dxs_k;
+	Kokkos::View<int*, Kokkos::SharedSpace> dys_k;
+	Kokkos::View<double*, Kokkos::SharedSpace> weights_k;
+
 
 	//812
 	//703
@@ -38,14 +41,16 @@ private:
 	void init_sumulation()
 	{
 
-		Kokkos::parallel_for("init_sum", NL * Ny * Nx, KOKKOS_LAMBDA(int i)
+		Kokkos::parallel_for("qwe", NL * Ny * Nx,
+			KOKKOS_LAMBDA(int i)
 		{
 			cur_table_k(i) = 0.6;
-			if (i / (Nx * Ny) == invert_k(4))
-				cur_table_k(i) = 1.2;
+			//if (i / (Nx * Ny) == invert_k(4))
+			//	cur_table_k(i) = 1.2;
 		});
-
-		Kokkos::parallel_for("init_sum2", Ny * Nx, KOKKOS_LAMBDA(int coor)
+		return;
+		Kokkos::parallel_for(
+			Kokkos::RangePolicy<Kokkos::DefaultExecutionSpace>(defExecSpace, 0, Ny * Nx), KOKKOS_LAMBDA(int coor)
 		{
 			int y = coor / Nx;
 			int x = coor % Nx;
@@ -70,7 +75,8 @@ private:
 	void update_stream()
 	{
 
-		Kokkos::parallel_for("stream", NL * Ny * Nx, KOKKOS_LAMBDA(int i)
+		Kokkos::parallel_for(
+			Kokkos::RangePolicy<Kokkos::DefaultExecutionSpace>(defExecSpace, 0, NL * Ny * Nx), KOKKOS_LAMBDA(int i)
 		{
 			int l = i / (Ny * Nx);
 			int coor = i % (Ny * Nx);
@@ -84,7 +90,7 @@ private:
 	}
 	void update_collide()
 	{
-		Kokkos::parallel_for("collide", Ny * Nx, KOKKOS_LAMBDA(int coor)
+		Kokkos::parallel_for(Kokkos::RangePolicy<Kokkos::DefaultExecutionSpace>(defExecSpace, 0, Ny * Nx), KOKKOS_LAMBDA(int coor)
 		{
 			float ux = 0.0;
 			float uy = 0.0;
@@ -126,18 +132,30 @@ public:
 
 	int get_W() { return Nx; }
 	int get_H() { return Ny; }
-	Kokkos::View<float*> get_table() { return new_table_k; }
 
 	BoltzmannSumulation(int _Nx, int _Ny) : Ny(_Ny), Nx(_Nx)
 	{
 		size_t SZ = Ny * Nx;
-		new_table_k = Kokkos::View<float*>("new_table", NL*SZ);
-		cur_table_k = Kokkos::View<float*>("cur_table", NL*SZ);
-		isBondary_k = Kokkos::View<bool*>("isBondary", SZ);
-		invert_k = Kokkos::View<int*>("invert", 9);
-		dxs_k = Kokkos::View<int*>("dxs", 9);
-		dys_k = Kokkos::View<int*>("dys", 9);
-		weights_k = Kokkos::View<double*>("w", 9);
+		//Kokkos::deep_copy()
+		Kokkos::resize(new_table_k, NL * SZ);
+
+		Kokkos::resize(cur_table_k, NL * SZ);
+
+		Kokkos::resize(isBondary_k, SZ);
+
+		Kokkos::resize(invert_k, 9);
+		Kokkos::resize(dxs_k, 9);
+		Kokkos::resize(dys_k, 9);
+		Kokkos::resize(weights_k, 9);
+
+
+		//new_table_k = Kokkos::View<float*, Kokkos::SharedSpace>("new_table", NL*SZ);
+	//	cur_table_k = Kokkos::View<float*, Kokkos::SharedSpace>("cur_table", NL*SZ);
+	//	isBondary_k = Kokkos::View<bool*, Kokkos::SharedSpace>("isBondary", SZ);
+	//	invert_k = Kokkos::View<int*, Kokkos::SharedSpace>("invert", 9);
+	//	dxs_k = Kokkos::View<int*, Kokkos::SharedSpace>("dxs", 9);
+	//	dys_k = Kokkos::View<int*, Kokkos::SharedSpace>("dys", 9);
+	//	weights_k = Kokkos::View<double*, Kokkos::SharedSpace>("w", 9);
 
 
 		invert_k(0) = 0;
@@ -185,7 +203,19 @@ public:
 		weights_k(8) = 1.0 / 36;
 
 
-		init_sumulation();
+		Kokkos::parallel_for("qwe", Kokkos::RangePolicy<Kokkos::DefaultExecutionSpace>(defExecSpace, 0, NL * Ny * Nx),
+			KOKKOS_LAMBDA(int i)
+		{
+			int a = 159532;
+
+			//cur_table_k(i) = 0.6;
+			//if (i / (Nx * Ny) == invert_k(4))
+			//	cur_table_k(i) = 1.2;
+		});
+
+		for (int i = 0; i < n; ++i) cout << cur_table_k(i);
+
+		///init_sumulation();
 	}
 
 	BoltzmannSumulation(const BoltzmannSumulation& bs) : Ny(bs.Ny), Nx(bs.Nx), TAU(bs.TAU)
@@ -199,12 +229,13 @@ public:
 
 	void update()
 	{
-		update_stream();
-		update_collide();
-		std::swap(cur_table_k, new_table_k);
+		std::cout << cur_table_k(50) << "\n";
+		//update_stream();
+		//update_collide();
+		//std::swap(cur_table_k, new_table_k);
 	}
 
 
 
 };
-#endif#pragma once
+#endif
