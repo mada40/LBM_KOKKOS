@@ -104,41 +104,39 @@ public:
 			float rho = 0.0;
 
 			SUM_RHO(0)
-				SUM_RHO(1)
-				SUM_RHO(2)
-				SUM_RHO(3)
-				SUM_RHO(4)
-				SUM_RHO(5)
-				SUM_RHO(6)
-				SUM_RHO(7)
-				SUM_RHO(8)
+			SUM_RHO(1)
+			SUM_RHO(2)
+			SUM_RHO(3)
+			SUM_RHO(4)
+			SUM_RHO(5)
+			SUM_RHO(6)
+			SUM_RHO(7)
+			SUM_RHO(8)
 
-				if (isBondary_k(coor))
-				{
-					UP_NT(0)
-					UP_NT(1)
-					UP_NT(2)
-					UP_NT(3)
-					UP_NT(4)
-					UP_NT(5)
-					UP_NT(6)
-					UP_NT(7)
-					UP_NT(8)
-				}
-				else
-				{
-					SUM_DU(0)
-					SUM_DU(1)
-					SUM_DU(2)
-					SUM_DU(3)
-					SUM_DU(4)
-					SUM_DU(5)
-					SUM_DU(6)
-					SUM_DU(7)
-					SUM_DU(8)
-				}
-
-
+			if (isBondary_k(coor))
+			{
+				UP_NT(0)
+				UP_NT(1)
+				UP_NT(2)
+				UP_NT(3)
+				UP_NT(4)
+				UP_NT(5)
+				UP_NT(6)
+				UP_NT(7)
+				UP_NT(8)
+			}
+			else
+			{
+				SUM_DU(0)
+				SUM_DU(1)
+				SUM_DU(2)
+				SUM_DU(3)
+				SUM_DU(4)
+				SUM_DU(5)
+				SUM_DU(6)
+				SUM_DU(7)
+				SUM_DU(8)
+			}
 
 			ux /= rho;
 			uy /= rho;
