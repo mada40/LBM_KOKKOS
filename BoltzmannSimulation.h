@@ -11,6 +11,16 @@
 #define CREATE_W const double weights_k[] = { 4.0 / 9, 1.0 / 9, 1.0 / 36, 1.0 / 9, 1.0 / 36, 1.0 / 9, 1.0 / 36, 1.0 / 9, 1.0 / 36 };
 #define CREATE_INV const int invert_k[] = { 0, 5,6,7,8,1,2,3,4 };
 
+#define FEQ(index) {									      \
+	int i = index * Nx * Ny + coor; 					              \
+	float tmp = dxs_k[index] * ux + dys_k[index] * uy;				      \
+	double Feq = rho * weights_k[index] * (1.0 + 3.0 * tmp + 4.5 * tmp * tmp - 1.5 * sqU);\
+	new_table_k(i) = new_table_k(i) - (new_table_k(i) - Feq) / TAU;}
+
+
+#define SUM_RHO(index) {rho += new_table_k(index * Nx * Ny + coor);}
+#define UP_NT(index) {new_table_k(index * Nx * Ny + coor) = new_table_k(invert_k[index] * Nx * Ny + coor);}
+#define SUM_DU(index) {ux += dxs_k[index] * new_table_k(index * Nx * Ny + coor); uy += dys_k[index] * new_table_k(index * Nx * Ny + coor);}
 
 class BoltzmannSumulation
 {
@@ -52,17 +62,11 @@ public:
 
 			int cylX = x - Nx / 2;
 			int cylY = y - Ny / 2;
+			isBondary_k(coor) = (abs(cylX) + abs(cylY) <= 2 * R);
 
-			if (abs(cylX) + abs(cylY) <= 2 * R)
-			{
-				isBondary_k(coor) = 1;
-			}
-			else
-			{
-				isBondary_k(coor) = 0;
-			}
 		});
 		Kokkos::fence();
+
 
 	}
 
@@ -75,13 +79,13 @@ public:
 			CREATE_DXS;
 			CREATE_DYS;
 
-			int l = i / (Ny * Nx);
-			int coor = i % (Ny * Nx);
+			int l = i / (Nx * Ny);
+			int coor = i % (Nx * Ny);
 			int y = coor / Nx;
 			int x = coor % Nx;
 			int new_y = (y + dys_k[l] + Ny) % Ny;
 			int new_x = (x + dxs_k[l] + Nx) % Nx;
-			new_table_k(l* (Ny* Nx) + new_y * Nx + new_x) = cur_table_k(i);
+			new_table_k(l* (Nx* Ny) + new_y * Nx + new_x) = cur_table_k(i);
 		});
 
 
@@ -98,33 +102,57 @@ public:
 			float ux = 0.0;
 			float uy = 0.0;
 			float rho = 0.0;
-			for (int l = 0; l < NL; l++)
-			{
-				int i = l * (Ny * Nx) + coor;
-				rho += new_table_k(i);
+
+			SUM_RHO(0)
+				SUM_RHO(1)
+				SUM_RHO(2)
+				SUM_RHO(3)
+				SUM_RHO(4)
+				SUM_RHO(5)
+				SUM_RHO(6)
+				SUM_RHO(7)
+				SUM_RHO(8)
+
 				if (isBondary_k(coor))
 				{
-					new_table_k(i) = new_table_k(invert_k[l] * Ny * Nx + coor);
+					UP_NT(0)
+						UP_NT(1)
+						UP_NT(2)
+						UP_NT(3)
+						UP_NT(4)
+						UP_NT(5)
+						UP_NT(6)
+						UP_NT(7)
+						UP_NT(8)
 				}
 				else
 				{
-					ux += dxs_k[l] * new_table_k(i);
-					uy += dys_k[l] * new_table_k(i);
+					SUM_DU(0)
+						SUM_DU(1)
+						SUM_DU(2)
+						SUM_DU(3)
+						SUM_DU(4)
+						SUM_DU(5)
+						SUM_DU(6)
+						SUM_DU(7)
+						SUM_DU(8)
 				}
-			}
+
+
+
 			ux /= rho;
 			uy /= rho;
-
-
 			float sqU = ux * ux + uy * uy;
-			for (int l = 0; l < NL; l++)
-			{
-				int i = l * (Ny * Nx) + coor;
-				float tmp = dxs_k[l] * ux + dys_k[l] * uy;
-				double Feq = rho * weights_k[l] * (1.0 + 3.0 * tmp + 4.5 * tmp * tmp - 1.5 * sqU);
-				new_table_k(i) = new_table_k(i) - (new_table_k(i) - Feq) / TAU;
-			}
 
+			FEQ(0)
+				FEQ(1)
+				FEQ(2)
+				FEQ(3)
+				FEQ(4)
+				FEQ(5)
+				FEQ(6)
+				FEQ(7)
+				FEQ(8)
 		});
 
 
@@ -138,11 +166,9 @@ public:
 
 	BoltzmannSumulation(int _Nx, int _Ny) : Ny(_Ny), Nx(_Nx)
 	{
-		size_t SZ = Ny * Nx;
-
-		Kokkos::resize(new_table_k, NL * SZ);
-		Kokkos::resize(cur_table_k, NL * SZ);
-		Kokkos::resize(isBondary_k, SZ);
+		Kokkos::resize(new_table_k, NL * Ny * Nx);
+		Kokkos::resize(cur_table_k, NL * Ny * Nx);
+		Kokkos::resize(isBondary_k, Ny * Nx);
 
 
 		init_sumulation();
