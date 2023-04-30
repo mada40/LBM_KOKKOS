@@ -116,26 +116,26 @@ public:
 				if (isBondary_k(coor))
 				{
 					UP_NT(0)
-						UP_NT(1)
-						UP_NT(2)
-						UP_NT(3)
-						UP_NT(4)
-						UP_NT(5)
-						UP_NT(6)
-						UP_NT(7)
-						UP_NT(8)
+					UP_NT(1)
+					UP_NT(2)
+					UP_NT(3)
+					UP_NT(4)
+					UP_NT(5)
+					UP_NT(6)
+					UP_NT(7)
+					UP_NT(8)
 				}
 				else
 				{
 					SUM_DU(0)
-						SUM_DU(1)
-						SUM_DU(2)
-						SUM_DU(3)
-						SUM_DU(4)
-						SUM_DU(5)
-						SUM_DU(6)
-						SUM_DU(7)
-						SUM_DU(8)
+					SUM_DU(1)
+					SUM_DU(2)
+					SUM_DU(3)
+					SUM_DU(4)
+					SUM_DU(5)
+					SUM_DU(6)
+					SUM_DU(7)
+					SUM_DU(8)
 				}
 
 
@@ -145,14 +145,14 @@ public:
 			float sqU = ux * ux + uy * uy;
 
 			FEQ(0)
-				FEQ(1)
-				FEQ(2)
-				FEQ(3)
-				FEQ(4)
-				FEQ(5)
-				FEQ(6)
-				FEQ(7)
-				FEQ(8)
+			FEQ(1)
+			FEQ(2)
+			FEQ(3)
+			FEQ(4)
+			FEQ(5)
+			FEQ(6)
+			FEQ(7)
+			FEQ(8)
 		});
 
 
