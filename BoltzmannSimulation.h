@@ -11,16 +11,19 @@
 #define CREATE_W const double weights_k[] = { 4.0 / 9, 1.0 / 9, 1.0 / 36, 1.0 / 9, 1.0 / 36, 1.0 / 9, 1.0 / 36, 1.0 / 9, 1.0 / 36 };
 #define CREATE_INV const int invert_k[] = { 0, 5,6,7,8,1,2,3,4 };
 
+
+#define myAccess(array, coor, l) array(coor, l)
+
 #define FEQ(index) {									      \
-	int i = index * Nx * Ny + coor; 					              \
 	float tmp = dxs_k[index] * ux + dys_k[index] * uy;				      \
 	double Feq = rho * weights_k[index] * (1.0 + 3.0 * tmp + 4.5 * tmp * tmp - 1.5 * sqU);\
-	new_table_k(i) = new_table_k(i) - (new_table_k(i) - Feq) / TAU;}
+	myAccess(new_table_k,coor,index) = myAccess(new_table_k,coor,index) - (myAccess(new_table_k,coor,index) - Feq) / TAU;}
 
 
-#define SUM_RHO(index) {rho += new_table_k(index * Nx * Ny + coor);}
-#define UP_NT(index) {new_table_k(index * Nx * Ny + coor) = new_table_k(invert_k[index] * Nx * Ny + coor);}
-#define SUM_DU(index) {ux += dxs_k[index] * new_table_k(index * Nx * Ny + coor); uy += dys_k[index] * new_table_k(index * Nx * Ny + coor);}
+#define SUM_RHO(index) {rho += myAccess(new_table_k,coor,index);}
+#define UP_NT(index) {myAccess(new_table_k,coor,index) = myAccess(new_table_k,coor,invert_k[index]);}
+#define SUM_DU(index) {ux += dxs_k[index] * myAccess(new_table_k,coor,index); uy += dys_k[index] * myAccess(new_table_k,coor,index);}
+
 
 class BoltzmannSumulation
 {
@@ -32,8 +35,8 @@ public:
 	const int Nx;
 	const int NL = 9;
 	const double TAU = 0.58;
-	Kokkos::View<float*, Kokkos::SharedSpace> new_table_k;
-	Kokkos::View<float*, Kokkos::SharedSpace> cur_table_k;
+	Kokkos::View<float**, Kokkos::SharedSpace> new_table_k;
+	Kokkos::View<float**, Kokkos::SharedSpace> cur_table_k;
 	Kokkos::View<bool*, Kokkos::SharedSpace> isBondary_k;
 
 
@@ -46,16 +49,18 @@ public:
 
 	void init_sumulation()
 	{
-
-		Kokkos::parallel_for("qwe", NL * Ny * Nx, KOKKOS_CLASS_LAMBDA(int i)
-		{
-			cur_table_k(i) = 0.6;
-			if (i / (Nx * Ny) == 8)
-				cur_table_k(i) = 1.2;
-		});
-
 		Kokkos::parallel_for("edwdewdw", Ny * Nx, KOKKOS_CLASS_LAMBDA(int coor)
 		{
+			myAccess(cur_table_k, coor, 0) = 0.6;
+			myAccess(cur_table_k, coor, 1) = 0.6;
+			myAccess(cur_table_k, coor, 2) = 0.6;
+			myAccess(cur_table_k, coor, 3) = 0.6;
+			myAccess(cur_table_k, coor, 4) = 0.6;
+			myAccess(cur_table_k, coor, 5) = 0.6;
+			myAccess(cur_table_k, coor, 6) = 0.6;
+			myAccess(cur_table_k, coor, 7) = 0.6;
+			myAccess(cur_table_k, coor, 8) = 1.2;
+
 			int y = coor / Nx;
 			int x = coor % Nx;
 			int R = Ny / 10;
@@ -66,26 +71,58 @@ public:
 
 		});
 		Kokkos::fence();
-
-
 	}
 
 
 	void update_stream()
 	{
 
-		Kokkos::parallel_for("aefef", NL * Ny * Nx, KOKKOS_CLASS_LAMBDA(int i)
+		Kokkos::parallel_for("aefef", Ny * Nx, KOKKOS_CLASS_LAMBDA(int coor)
 		{
 			CREATE_DXS;
 			CREATE_DYS;
 
-			int l = i / (Nx * Ny);
-			int coor = i % (Nx * Ny);
 			int y = coor / Nx;
 			int x = coor % Nx;
-			int new_y = (y + dys_k[l] + Ny) % Ny;
-			int new_x = (x + dxs_k[l] + Nx) % Nx;
-			new_table_k(l* (Nx* Ny) + new_y * Nx + new_x) = cur_table_k(i);
+
+
+			int new_y = (y + dys_k[0] + Ny) % Ny;
+			int new_x = (x + dxs_k[0] + Nx) % Nx;
+			myAccess(new_table_k, new_y* Nx + new_x, 0) = myAccess(cur_table_k, coor, 0);
+
+			new_y = (y + dys_k[1] + Ny) % Ny;
+			new_x = (x + dxs_k[1] + Nx) % Nx;
+			myAccess(new_table_k, new_y* Nx + new_x, 1) = myAccess(cur_table_k, coor, 1);
+
+			new_y = (y + dys_k[2] + Ny) % Ny;
+			new_x = (x + dxs_k[2] + Nx) % Nx;
+			myAccess(new_table_k, new_y* Nx + new_x, 2) = myAccess(cur_table_k, coor, 2);
+
+			new_y = (y + dys_k[3] + Ny) % Ny;
+			new_x = (x + dxs_k[3] + Nx) % Nx;
+			myAccess(new_table_k, new_y* Nx + new_x, 3) = myAccess(cur_table_k, coor, 3);
+
+			new_y = (y + dys_k[4] + Ny) % Ny;
+			new_x = (x + dxs_k[4] + Nx) % Nx;
+			myAccess(new_table_k, new_y* Nx + new_x, 4) = myAccess(cur_table_k, coor, 4);
+
+			new_y = (y + dys_k[5] + Ny) % Ny;
+			new_x = (x + dxs_k[5] + Nx) % Nx;
+			myAccess(new_table_k, new_y* Nx + new_x, 5) = myAccess(cur_table_k, coor, 5);
+
+			new_y = (y + dys_k[6] + Ny) % Ny;
+			new_x = (x + dxs_k[6] + Nx) % Nx;
+			myAccess(new_table_k, new_y* Nx + new_x, 6) = myAccess(cur_table_k, coor, 6);
+
+
+			new_y = (y + dys_k[7] + Ny) % Ny;
+			new_x = (x + dxs_k[7] + Nx) % Nx;
+			myAccess(new_table_k, new_y* Nx + new_x, 7) = myAccess(cur_table_k, coor, 7);
+
+
+			new_y = (y + dys_k[8] + Ny) % Ny;
+			new_x = (x + dxs_k[8] + Nx) % Nx;
+			myAccess(new_table_k, new_y* Nx + new_x, 8) = myAccess(cur_table_k, coor, 8);
 		});
 
 
@@ -104,53 +141,55 @@ public:
 			float rho = 0.0;
 
 			SUM_RHO(0)
-			SUM_RHO(1)
-			SUM_RHO(2)
-			SUM_RHO(3)
-			SUM_RHO(4)
-			SUM_RHO(5)
-			SUM_RHO(6)
-			SUM_RHO(7)
-			SUM_RHO(8)
+				SUM_RHO(1)
+				SUM_RHO(2)
+				SUM_RHO(3)
+				SUM_RHO(4)
+				SUM_RHO(5)
+				SUM_RHO(6)
+				SUM_RHO(7)
+				SUM_RHO(8)
 
-			if (isBondary_k(coor))
-			{
-				UP_NT(0)
-				UP_NT(1)
-				UP_NT(2)
-				UP_NT(3)
-				UP_NT(4)
-				UP_NT(5)
-				UP_NT(6)
-				UP_NT(7)
-				UP_NT(8)
-			}
-			else
-			{
-				SUM_DU(0)
-				SUM_DU(1)
-				SUM_DU(2)
-				SUM_DU(3)
-				SUM_DU(4)
-				SUM_DU(5)
-				SUM_DU(6)
-				SUM_DU(7)
-				SUM_DU(8)
-			}
+				if (isBondary_k(coor))
+				{
+					UP_NT(0)
+						UP_NT(1)
+						UP_NT(2)
+						UP_NT(3)
+						UP_NT(4)
+						UP_NT(5)
+						UP_NT(6)
+						UP_NT(7)
+						UP_NT(8)
+				}
+				else
+				{
+					SUM_DU(0)
+						SUM_DU(1)
+						SUM_DU(2)
+						SUM_DU(3)
+						SUM_DU(4)
+						SUM_DU(5)
+						SUM_DU(6)
+						SUM_DU(7)
+						SUM_DU(8)
+				}
+
+
 
 			ux /= rho;
 			uy /= rho;
 			float sqU = ux * ux + uy * uy;
 
 			FEQ(0)
-			FEQ(1)
-			FEQ(2)
-			FEQ(3)
-			FEQ(4)
-			FEQ(5)
-			FEQ(6)
-			FEQ(7)
-			FEQ(8)
+				FEQ(1)
+				FEQ(2)
+				FEQ(3)
+				FEQ(4)
+				FEQ(5)
+				FEQ(6)
+				FEQ(7)
+				FEQ(8)
 		});
 
 
@@ -160,12 +199,12 @@ public:
 
 	int get_W() { return Nx; }
 	int get_H() { return Ny; }
-	Kokkos::View<float*, Kokkos::SharedSpace> get_table() { return cur_table_k; }
+	Kokkos::View<float**, Kokkos::SharedSpace> get_table() { return cur_table_k; }
 
 	BoltzmannSumulation(int _Nx, int _Ny) : Ny(_Ny), Nx(_Nx)
 	{
-		Kokkos::resize(new_table_k, NL * Ny * Nx);
-		Kokkos::resize(cur_table_k, NL * Ny * Nx);
+		Kokkos::resize(new_table_k, Ny * Nx, NL);
+		Kokkos::resize(cur_table_k, Ny * Nx, NL);
 		Kokkos::resize(isBondary_k, Ny * Nx);
 
 
