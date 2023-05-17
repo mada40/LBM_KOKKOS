@@ -46,10 +46,6 @@ public:
 	Kokkos::View<bool**, Kokkos::SharedSpace> isBondary_k;
 
 
-	//812
-	//703
-	//654
-
 	BoltzmannSumulation& operator = (const BoltzmannSumulation& other) = default;
 	BoltzmannSumulation(const BoltzmannSumulation& bs) = default;
 
